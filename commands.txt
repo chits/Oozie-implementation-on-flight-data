@@ -1,0 +1,209 @@
+
+Fully Distributed Mode:
+EC2 instances used are:
+CRai_1 as hadoop-master and hadoop-slave.
+CRai_2 as hadoop-slave
+The commands for configuration in fully distributed mode are:
+For the hadoop-slave machine:
+1. Copy the key,hadoop distribution from your local machine to ec2 instance using the following command:
+scp -i <key> <key> hadoop-2.6.1.tar ec2-user@public_dns_of_yourInstance:~
+2. Login to your ec2 instance using:
+ssh -i <key> ec2-user@public_dns_of_yourInstance
+3. Edit the hosts file using:
+sudo vi /etc/hosts
+Copy the private ip’s of your vm instances in it:
+<IP> hadoop-master
+<IP> hadoop-slave
+4. Untar the downloaded hadoop distribution
+tar -zxvf hadoop-2.6.1.tar
+5. cd hadoop-2.6.1
+6. Edit the 3 files as:
+1. sudo vi etc/hadoop/core-site.xml
+<configuration>
+   <property> 
+     <name>fs.default.name</name> 
+      <value>hdfs://hadoop-master:9000/</value> 
+   </property> 
+  <property> 
+     <name>dfs.permissions</name> 
+     <value>false</value> 
+   </property> 
+     </configuration>
+2. In this file we write the value as 2 as we are using 2 data nodes. Also master is used both as name node and data node.
+sudo vi etc/hadoop/hdfs-site.xml
+<configuration>
+  <property> 
+      <name>dfs.data.dir</name> 
+      <value>/home/ec2-user/hadoop/dfs/name/data</value>
+      <final>true</final> 
+  </property> 
+  <property> 
+      <name>dfs.name.dir</name> 
+      <value>/home/ec2-user/hadoop/dfs/name</value> 
+         <final>true</final> 
+     </property> 
+     <property> 
+          <name>dfs.replication</name> 
+          <value>2</value> 
+     </property> 
+</configuration>
+3. sudo vi etc/hadoop/mapred-site.xml.template
+<configuration>
+   <property> 
+      <name>mapred.job.tracker</name> 
+      <value>hadoop-master:9001</value> 
+   </property> 
+</configuration>
+7. Edit the slaves file
+cd etc
+cd hadoop
+vi slaves
+copy the following in slaves files(name of ur slaves)
+hadoop-master
+hadoop-slave
+8. exit from this instance
+
+For the hadoop-master machine:
+1. Copy the key,hadoop distribution, .jar file and input file from your local machine to ec2 instance using the following command:
+scp -i <key> <key> hadoop-2.6.1.tar RF.jar 100KWikiText.txt ec2-user@public_dns_of_yourInstance:~
+2. Login to your ec2 instance using:
+ssh -i <key> ec2-user@public_dns_of_yourInstance
+3. Edit the hosts file using:
+sudo vi /etc/hosts
+Copy the private ip’s of your vm instances in it:
+<IP> hadoop-master
+<IP> hadoop-slave
+4. Setup passphraseless ssh
+ssh-keygen -t dsa -P '' -f ~/.ssh/id_dsa
+cat ~/.ssh/id_dsa.pub >> ~/.ssh/authorized_keys
+ssh hadoop-master
+exit
+# for ssh in slave
+eval $(‘ssh-agent’)
+ssh-add <key.pem>
+ssh hadoop-slave
+exit
+5. Untar the downloaded hadoop distribution
+tar -zxvf hadoop-2.6.1.tar
+6. cd hadoop-2.6.1
+7. Edit the 3 files as:
+1. sudo vi etc/hadoop/core-site.xml
+<configuration>
+   <property> 
+     <name>fs.default.name</name> 
+      <value>hdfs://hadoop-master:9000/</value> 
+   </property> 
+  <property> 
+     <name>dfs.permissions</name> 
+     <value>false</value> 
+   </property> 
+     </configuration>
+2. In this file we write the value as 2 as we are using 2 data nodes. Also master is used both as name node and data node.
+sudo vi etc/hadoop/hdfs-site.xml
+<configuration>
+  <property> 
+      <name>dfs.data.dir</name> 
+      <value>/home/ec2-user/hadoop/dfs/name/data</value>
+      <final>true</final> 
+  </property> 
+  <property> 
+      <name>dfs.name.dir</name> 
+      <value>/home/ec2-user/hadoop/dfs/name</value> 
+         <final>true</final> 
+     </property> 
+     <property> 
+          <name>dfs.replication</name> 
+          <value>2</value> 
+     </property> 
+</configuration>
+3. sudo vi etc/hadoop/mapred-site.xml.template
+<configuration>
+   <property> 
+      <name>mapred.job.tracker</name> 
+      <value>hadoop-master:9001</value> 
+   </property> 
+</configuration>
+8. Edit the slaves file and master file
+cd etc
+cd hadoop
+vi slaves
+copy the following in slaves files(name of ur slaves)
+hadoop-master
+hadoop-slave
+
+#edit master file
+vi master
+copy the following
+hadoop-master
+
+
+
+Commands for Oozie Installation:
+
+Pre Requisites
+
+Oozie-4.1.0.tar.gz
+Apache maven 3.3.3
+Jdk 1.6 or greater
+
+
+Building oozie
+First download and install all the above prerequisite in your vm instances.
+To build oozie you can use the following command:
+Bin/mkditro.sh –DskipTests
+The above command should build all the projects included in your oozie source folder and should create a binary distribution of oozie that we will use to install client and server.
+After a successful build, create a new folder called oozie so that we can move our binary distribution to an individual folder
+
+Use the following command:
+cp -R oozie-4.1.0/distro/target/oozie-4.1.0-distro/oozie-4.1.0/ oozie
+Change your directory to oozie and create a new directory with in it called libext, we will use this directory for the required hadoop libs.
+mkdir libext
+Next we need to copy all the required hadooplibs into ext folder. 
+
+After extracting the hadooplibs we need to move the libraries to libext, using the following command:
+cp oozie-4.1.0/hadooplibs/hadooplib-2.3.0.oozie-4.1.0/* libext/
+The above command will make all the hadooplibs available to oozie.
+We need to make one configuration change in hadoop.
+
+Update ../hadoop/conf/core-site.xml as follows:
+<property>
+<name>hadoop.proxyuser.hduser.hosts</name>
+<value>localhost</value>
+</property>
+<property>
+<name>hadoop.proxyuser.hduser.groups</name>
+<value>hadoop</value>
+</property>
+
+/bin/oozie-setup.sh prepare-war
+
+Create sharelib on HDFS
+$ ./bin/oozie-setup.sh sharelib create -fs hdfs://localhost:54310
+setting CATALINA_OPTS="$CATALINA_OPTS -Xmx1024m"
+the destination path for sharelib is: /user/hduser/share/lib
+./bin/ooziedb.sh create -sqlfile oozie.sql –run
+./bin/oozied.sh start
+./bin/oozied.sh run
+After the run command the oozie server should be up and running.
+To monitor the status run the following command:
+$ ./bin/oozie admin -oozie http://localhost:11000/oozie -status
+You should get the following status:
+System mode: NORMAL
+
+Now for execution of map reduce job in oozie
+Execution (all these command to be executed from within the hadoop-2.6.1 directory)
+1. Format the file system by:
+bin/hdfs namenode -format
+2. Start NameNode and data node daemons:
+sbin/start-dfs.sh
+3. Make the HDFS directories required to execute MapReduce jobs:
+bin/hdfs dfs -mkdir /user
+bin/hdfs dfs -mkdir /user/ec2-user
+4. Copy the input files into the distributed filesystem:
+ bin/hdfs dfs -put /home/ec2-user/Flight Flight
+5. Run 
+bin/oozie job -oozie http://localhost:11000/oozie -config /home/ec2-user/Flight/apps/bigdataFinal/job.properties -run
+6. Also we can check the web interface of our system by going to:
+http://<public dns of master vm>:50070/
+
+
